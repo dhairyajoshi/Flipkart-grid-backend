@@ -7,7 +7,7 @@ const contractAddress = process.env.contract_address
 
 const web3 = new Web3('http://127.0.0.1:7545')
 
-const senderAddress = process.env.metamask_address.toString();
+const senderAddress = process.env.metamask_address;
 const privateKey = process.env.metamask_key.toString();
 const contract = new web3.eth.Contract(contractABI, contractAddress);
 
@@ -37,9 +37,9 @@ module.exports.addReward = async (receiverAddress, amount) => {
         const signedTx = await web3.eth.accounts.signTransaction(
             {
                 ...txObject,
-                nonce: web3.utils.toHex(nonce).toString(),
-                gasPrice: web3.utils.toHex(gasPrice).toString(),
-                gasLimit: web3.utils.toHex(6721975).toString(),
+                nonce: web3.utils.toHex(nonce),
+                gasPrice: web3.utils.toHex(gasPrice),
+                gasLimit: web3.utils.toHex(672197499),
                 value: '0x0',
             },
             privateKey
@@ -47,7 +47,7 @@ module.exports.addReward = async (receiverAddress, amount) => {
 
         await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
     } catch (err) {
-        console.error(err);
+        console.error(err); 
     }
 
 
@@ -67,8 +67,8 @@ module.exports.getRewardHistory = async (req, res, next) => {
                 createdAt: convertTime(result['earningHistory'][i]['createAt'].toString()),
                 expiryDate: convertTime(result['earningHistory'][i]['expiryDate'].toString())
             })
-        }
-        const response = {
+        } 
+        const response = {  
             totalEarning: result['totalEarning'].toString(),
             earningHistory
         }
@@ -98,6 +98,6 @@ module.exports.getTokens = async (req, res, next) => {
     }
 }
 
-module.exports.transfer = async (sender, amount) => {
-    await contract.methods.transfer(sender, amount).send({ from: senderAddress })
+module.exports.transfer = async (sender, receiver = senderAddress, amount) => {
+    await contract.methods.transferFrom(sender, receiver, amount).send({ from: senderAddress })
 }  

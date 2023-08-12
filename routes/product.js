@@ -6,7 +6,6 @@ const productController = require('../controllers/productController')
 const sellerCheck = require('../middlewares/sellerCheck')
 const authCheck = require('../middlewares/authCheck')
 
-router.post('/addproduct', sellerCheck, productController.addProduct)
 router.get('/getall', productController.getAllProducts)
 router.post('/buy', authCheck, productController.buy)
 

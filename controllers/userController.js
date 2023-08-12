@@ -6,6 +6,11 @@ const userModel = require('../models/userModel');
 const { Web3 } = require('web3');
 const transactionModel = require('../models/transactionModel');
 const web3 = new Web3('http://127.0.0.1:7545')
+const contractController = require('../controllers/contractController')
+
+function generateReferral(length) {
+    return [...Array(length)].map(() => Math.random().toString(36)[2]).join('');
+}
 
 module.exports.signUp = async (req, res, next) => {
     check = await User.findOne({ username: req.body.username });
@@ -16,9 +21,27 @@ module.exports.signUp = async (req, res, next) => {
     if (check != null)
         return res.status(400).json({ msg: "email already exists" });
 
+
+    const refId = req.body.refId
+
+    var referrar = ""
+    if (refId) {
+        referrar = await userModel.findOne({ referral_code: refId })
+        if (!referrar)
+            return res.status(400).json({ msg: 'Invalid referral code!' })
+    }
+
     const hashed = await bcrypt.hash(req.body.password, 10);
 
     const newAccount = await web3.eth.accounts.create();
+
+    var ref_code = generateReferral(12)
+    var checkUser = await userModel.findOne({ referral_code: ref_code })
+    while (checkUser) {
+        console.log(checkUser)
+        ref_code = generateReferral(12)
+        checkUser = await userModel.findOne({ referral_code: ref_code })
+    }
 
     const user = new User({
         _id: new mongoose.Types.ObjectId(),
@@ -29,9 +52,15 @@ module.exports.signUp = async (req, res, next) => {
         walletAddress: newAccount.address,
         role: req.body.role,
         password: hashed,
+        referral_code: ref_code
     });
 
     await user.save();
+
+    if (referrar != "") {
+        await contractController.addReward(referrar.walletAddress, 50)
+        await contractController.addReward(user.walletAddress, 50)
+    }
 
     const token = jwt.sign(
         {
@@ -83,7 +112,6 @@ module.exports.getUser = async (req, res, next) => {
 }
 
 module.exports.getAllUser = async (req, res, next) => {
-    console.log('got')
     users = await userModel.find().exec()
     res.status(200).json(users)
 }

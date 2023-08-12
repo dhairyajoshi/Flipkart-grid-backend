@@ -12,7 +12,8 @@ const UserSchema = mongoose.Schema({
     supercoins: { type: Number, default: 0 },
     rewardHistory: [{ type: mongoose.Schema.Types.ObjectId, ref: "GridRewardHistory" }],
     role: { type: String, default: "customer" },
-    products:[{ type: mongoose.Schema.Types.ObjectId, ref: "GridProduct" }]
+    products: [{ type: mongoose.Schema.Types.ObjectId, ref: "GridProduct" }],
+    referral_code: { type: String }
 })
 
 module.exports = mongoose.model("GridUser", UserSchema)   

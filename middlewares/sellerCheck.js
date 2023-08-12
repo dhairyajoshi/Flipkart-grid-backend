@@ -9,6 +9,10 @@ module.exports = async (req, res, next) => {
         const user = await userModel.findById(decoded.userId)
         if (user.role === 'seller')
             next();
+        else
+            return res.status(401).json({
+                msg: 'Not authorized'
+            })
     }
     catch (error) {
         return res.status(401).json({
