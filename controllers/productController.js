@@ -33,34 +33,43 @@ module.exports.buy = async (req, res, next) => {
     const productPrice = product.price
     const supercoins = req.body.supercoins ? req.body.supercoins : 0
 
-    if (productPrice + supercoins <= user.account) {
-        user.account -= productPrice - supercoins
-        seller.account += productPrice
-        user.save()
-        seller.save()
-        if (supercoins > 0)
-            await contract.transfer(user.walletAddress, undefined, supercoins)
-        await contract.addReward(user.walletAddress, productPrice * 0.05)
-        await contract.addReward(seller.walletAddress, productPrice * 0.05)
+    try {
+        if (productPrice + supercoins <= user.account) {
+            user.account -= productPrice - supercoins
+            seller.account += productPrice
+            user.save()
+            seller.save()
+            if (supercoins > 0)
+                await contract.transfer(user.walletAddress, undefined, supercoins)
+            await contract.addReward(user.walletAddress, productPrice * 0.05)
+            await contract.addReward(seller.walletAddress, productPrice * 0.05)
 
-        const transaction = new transactionModel({
-            _id: new mongoose.Types.ObjectId(),
-            name: product.name,
-            user: user._id,
-            product: product._id,
-            seller: seller._id,
-            date: getCurrentDateTime(),
-            price: product.price, 
-            rewardEarned: productPrice * 0.05
-        })
- 
-        await transaction.save()
+            const transaction = new transactionModel({
+                _id: new mongoose.Types.ObjectId(),
+                name: product.name,
+                user: user._id,
+                product: product._id,
+                seller: seller._id,
+                date: getCurrentDateTime(),
+                price: product.price,
+                supercoins: supercoins,
+                rewardEarned: productPrice * 0.05
+            })
 
-        user.transactions.push(transaction);
-        user.save();
+            await transaction.save()
 
-        res.status(200).json({ msg: 'product ordered successfully' })
-    } else {
-        res.status(400).json({ msg: 'Not enough money to purchase!' })
+            user.transactions.push(transaction);
+            user.save();
+
+            res.status(200).json({ msg: 'product ordered successfully' })
+        } else {
+            res.status(400).json({ msg: 'Not enough money to purchase!' })
+        }
+    } catch (err) {
+        console.log(err)
+        res.status(400).json({ msg: err })
     }
+
+
+
 }

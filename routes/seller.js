@@ -10,4 +10,6 @@ router.post('/addproduct', sellerCheck, sellerController.addProduct)
 
 router.get('/topcustomers',sellerCheck,sellerController.getTopCustomers)
 
+router.post('/rewardcustomer',sellerCheck,sellerController.rewardCustomer)
+
 module.exports = router 

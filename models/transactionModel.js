@@ -6,10 +6,11 @@ const TransactionModel = mongoose.Schema({
     user: { type: mongoose.Schema.Types.ObjectId, ref: "GridUser" },
     product: { type: mongoose.Schema.Types.ObjectId, ref: "GridProduct" },
     seller: { type: mongoose.Schema.Types.ObjectId, ref: "GridUser" },
-    date: { type: Date },
+    date: { type: String },
     price: { type: Number },
+    supercoins: { type: Number, default: 0 },
     rewardEarned: { type: Number }
 
 })
 
-module.exports = mongoose.model("GridTrans", TransactionModel)     
+module.exports = mongoose.model("GridTrans", TransactionModel)    

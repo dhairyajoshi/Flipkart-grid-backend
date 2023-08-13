@@ -39,7 +39,7 @@ module.exports.addReward = async (receiverAddress, amount) => {
                 ...txObject,
                 nonce: web3.utils.toHex(nonce),
                 gasPrice: web3.utils.toHex(gasPrice),
-                gasLimit: web3.utils.toHex(672197499),
+                gasLimit: web3.utils.toHex(672197498),
                 value: '0x0',
             },
             privateKey
@@ -47,7 +47,7 @@ module.exports.addReward = async (receiverAddress, amount) => {
 
         await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
     } catch (err) {
-        console.error(err); 
+        console.error(err);
     }
 
 
@@ -67,8 +67,8 @@ module.exports.getRewardHistory = async (req, res, next) => {
                 createdAt: convertTime(result['earningHistory'][i]['createAt'].toString()),
                 expiryDate: convertTime(result['earningHistory'][i]['expiryDate'].toString())
             })
-        } 
-        const response = {  
+        }
+        const response = {
             totalEarning: result['totalEarning'].toString(),
             earningHistory
         }
@@ -86,7 +86,8 @@ module.exports.getTokens = async (req, res, next) => {
         const user = await userModel.findById(req.UserData.userId)
 
         const address = user.walletAddress
-        await contract.methods.expireTokens(address).send({ from: senderAddress })
+        gasLimit = await contract.methods.expireTokens(address).estimateGas({ from: senderAddress })
+        await contract.methods.expireTokens(address).send({ from: senderAddress, gas: gasLimit })
         const result = await contract.methods.viewTokens(address).call()
         tokens = result.toString()
         user.supercoins = tokens
@@ -99,5 +100,13 @@ module.exports.getTokens = async (req, res, next) => {
 }
 
 module.exports.transfer = async (sender, receiver = senderAddress, amount) => {
-    await contract.methods.transferFrom(sender, receiver, amount).send({ from: senderAddress })
-}  
+    await contract.methods.expireTokens(sender).send({ from: senderAddress })
+    const avl = await contract.methods.viewTokens(sender).call()
+    if (avl >= amount) {
+        gasLimit = await contract.methods.transferFrom(sender, receiver, amount).estimateGas({ from: senderAddress })
+        await contract.methods.transferFrom(sender, receiver, amount).send({ from: senderAddress, gas: gasLimit })
+    }
+
+    else
+        throw ('Not Enough Tokens')
+} 

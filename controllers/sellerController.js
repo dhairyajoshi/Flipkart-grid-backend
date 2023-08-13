@@ -2,6 +2,7 @@ const productModel = require("../models/productModel")
 const TransactionModel = require("../models/transactionModel")
 const userModel = require("../models/userModel")
 const mongoose = require('mongoose')
+const contractController = require('./contractController')
 
 module.exports.addProduct = async (req, res, next) => {
     const product = productModel({
@@ -46,4 +47,21 @@ module.exports.getTopCustomers = async (req, res, next) => {
     }));
 
     res.status(200).json(data)
+}
+
+module.exports.rewardCustomer = async (req, res, next) => {
+    try {
+
+        customerId = req.body.customerId
+        supercoins = req.body.supercoins
+        user = await userModel.findById(customerId)
+        seller = await userModel.findById(req.UserData.userId)
+
+        await contractController.transfer(seller.walletAddress, user.walletAddress, supercoins)
+
+        res.status(200).json({ 'msg': "customer rewarded successfully" })
+    } catch (err) {
+        res.status(500).json({ 'msg': "some error occurred" })
+    }
+
 }
