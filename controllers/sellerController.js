@@ -5,15 +5,16 @@ const mongoose = require('mongoose')
 const contractController = require('./contractController')
 
 module.exports.addProduct = async (req, res, next) => {
+    const seller = await userModel.findById(req.UserData.userId)
+
     const product = productModel({
         _id: new mongoose.Types.ObjectId(),
         name: req.body.name,
-        seller: req.UserData.userId,
+        seller_id: seller._id,
+        seller_name: seller.name,
         price: req.body.price,
         rating: req.body.rating
     })
-
-    const seller = await userModel.findById(req.UserData.userId)
 
     product.save()
 

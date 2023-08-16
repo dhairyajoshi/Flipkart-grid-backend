@@ -13,9 +13,9 @@ function generateReferral(length) {
 }
 
 module.exports.signUp = async (req, res, next) => {
-    check = await User.findOne({ username: req.body.username });
-    if (check != null)
-        return res.status(400).json({ msg: "username already exists" });
+    // check = await User.findOne({ username: req.body.username });
+    // if (check != null)
+    //     return res.status(400).json({ msg: "username already exists" });
 
     check = await User.findOne({ email: req.body.email });
     if (check != null)
@@ -48,7 +48,6 @@ module.exports.signUp = async (req, res, next) => {
         name: req.body.name,
         email: req.body.email,
         token: req.body.token,
-        username: req.body.username,
         walletAddress: newAccount.address,
         role: req.body.role,
         password: hashed,
@@ -64,7 +63,7 @@ module.exports.signUp = async (req, res, next) => {
 
     const token = jwt.sign(
         {
-            username: user.username,
+            email: user.email,
             userId: user._id,
         },
         process.env.jwt_key,
@@ -79,7 +78,7 @@ module.exports.signUp = async (req, res, next) => {
 };
 
 module.exports.logIn = async (req, res, next) => {
-    const user = await User.findOne({ username: req.body.username });
+    const user = await User.findOne({ email: req.body.email });
 
     if (user == null) {
         return res.status(400).json({ msg: "Wrong credentials!" });
@@ -92,7 +91,7 @@ module.exports.logIn = async (req, res, next) => {
 
     const token = jwt.sign(
         {
-            username: user.username,
+            email: user.email,
             userId: user._id,
         },
         process.env.jwt_key,
@@ -142,7 +141,13 @@ module.exports.updateUser = async (req, res, next) => {
 }
 
 module.exports.getAllOrders = async (req, res, next) => {
-    const orders = await transactionModel.find({ user: req.UserData.userId }).exec()
+    const user = await userModel.findById(req.UserData.userId);
+    var orders = {}
+
+    if (user.role == 'customer')
+        orders = await transactionModel.find({ user: req.UserData.userId }).exec()
+    else
+        orders = await transactionModel.find({ seller_id: req.UserData.userId }).exec()
 
 
     res.status(200).json({ ...orders })

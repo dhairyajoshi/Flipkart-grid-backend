@@ -6,7 +6,6 @@ const userModel = require('../models/userModel');
 const contractAddress = process.env.contract_address
 
 const web3 = new Web3('http://127.0.0.1:7545')
-
 const senderAddress = process.env.metamask_address;
 const privateKey = process.env.metamask_key.toString();
 const contract = new web3.eth.Contract(contractABI, contractAddress);
@@ -87,7 +86,7 @@ module.exports.getTokens = async (req, res, next) => {
 
         const address = user.walletAddress
         gasLimit = await contract.methods.expireTokens(address).estimateGas({ from: senderAddress })
-        await contract.methods.expireTokens(address).send({ from: senderAddress, gas: gasLimit })
+        await contract.methods.expireTokens(address).send({ from: senderAddress, gas: gasLimit + BigInt(100000) })
         const result = await contract.methods.viewTokens(address).call()
         tokens = result.toString()
         user.supercoins = tokens

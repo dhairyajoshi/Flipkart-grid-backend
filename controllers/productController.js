@@ -3,6 +3,7 @@ const mongoose = require('mongoose')
 const userModel = require("../models/userModel")
 const contract = require('./contractController')
 const transactionModel = require("../models/transactionModel")
+const RewardModel = require("../models/RewardModel")
 
 function getCurrentDateTime() {
     const now = new Date();
@@ -20,7 +21,12 @@ function getCurrentDateTime() {
 
 
 module.exports.getAllProducts = async (req, res, next) => {
-    const result = await productModel.find()
+    var result = {}
+    const user = await userModel.findById(req.UserData.userId);
+    if (user.role === 'seller')
+        result = await productModel.find({ seller_id: req.UserData.userId })
+    else
+        result = await productModel.find()
 
     res.status(200).json({ ...result })
 }
@@ -29,7 +35,7 @@ module.exports.buy = async (req, res, next) => {
     const productId = req.body.productId
     const product = await productModel.findById(productId)
     const user = await userModel.findById(req.UserData.userId)
-    const seller = await userModel.findById(product.seller)
+    const seller = await userModel.findById(product.seller_id)
     const productPrice = product.price
     const supercoins = req.body.supercoins ? req.body.supercoins : 0
 
@@ -37,19 +43,47 @@ module.exports.buy = async (req, res, next) => {
         if (productPrice + supercoins <= user.account) {
             user.account -= productPrice - supercoins
             seller.account += productPrice
-            user.save()
-            seller.save()
+            await user.save()
+            await seller.save()
             if (supercoins > 0)
                 await contract.transfer(user.walletAddress, undefined, supercoins)
             await contract.addReward(user.walletAddress, productPrice * 0.05)
             await contract.addReward(seller.walletAddress, productPrice * 0.05)
+
+            // const userReward = new RewardModel({
+            //     _id:new mongoose.Types.ObjectId(),
+            //     user: user._id,
+            //     amount: productPrice * 0.05,
+            //     received: true,
+            //     from: "FlipKart Reward Points",
+            //     transaction: product.name
+            // })
+
+            // const sellerReward = new RewardModel({
+            //     _id:new mongoose.Types.ObjectId(),
+            //     user: seller._id,
+            //     amount: productPrice * 0.05,
+            //     received: true,
+            //     from: "FlipKart Reward Points",
+            //     transaction: product.name
+            // })
+
+            // await userReward.save();
+            // await sellerReward.save();
+
+            // user.rewardHistory.push(userReward)
+            // sellerReward.rewardHistory.push(sellerReward)
+
+            // await user.save()
+            // seller.save()
 
             const transaction = new transactionModel({
                 _id: new mongoose.Types.ObjectId(),
                 name: product.name,
                 user: user._id,
                 product: product._id,
-                seller: seller._id,
+                seller_id: seller._id,
+                seller_name: seller.name,
                 date: getCurrentDateTime(),
                 price: product.price,
                 supercoins: supercoins,

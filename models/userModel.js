@@ -4,7 +4,7 @@ const UserSchema = mongoose.Schema({
     _id: mongoose.Schema.Types.ObjectId,
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
-    username: { type: String, required: true, unique: true },
+    phone: { type: String, },
     password: { type: String, required: true },
     transactions: [{ type: mongoose.Schema.Types.ObjectId, ref: "GridTransaction" }],
     account: { type: Number, default: 65000 },
@@ -16,4 +16,4 @@ const UserSchema = mongoose.Schema({
     referral_code: { type: String }
 })
 
-module.exports = mongoose.model("GridUser", UserSchema)   
+module.exports = mongoose.model("GridUser", UserSchema) 
