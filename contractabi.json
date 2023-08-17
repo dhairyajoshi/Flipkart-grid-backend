@@ -191,6 +191,11 @@
 								"internalType": "uint256",
 								"name": "expiryDate",
 								"type": "uint256"
+							},
+							{
+								"internalType": "address",
+								"name": "from",
+								"type": "address"
 							}
 						],
 						"internalType": "struct SuperToken.TokenData[]",

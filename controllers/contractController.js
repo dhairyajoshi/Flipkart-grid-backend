@@ -64,7 +64,8 @@ module.exports.getRewardHistory = async (req, res, next) => {
             earningHistory.push({
                 tokens: result['earningHistory'][i]['amount'].toString(),
                 createdAt: convertTime(result['earningHistory'][i]['createAt'].toString()),
-                expiryDate: convertTime(result['earningHistory'][i]['expiryDate'].toString())
+                expiryDate: convertTime(result['earningHistory'][i]['expiryDate'].toString()),
+                from: result['earningHistory'][i]['from'].toString() === process.env.metamask_address ? 'Flipkart Reward Points' : 'Customer Loyalty Points'
             })
         }
         const response = {

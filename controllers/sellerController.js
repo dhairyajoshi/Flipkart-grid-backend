@@ -28,7 +28,7 @@ module.exports.addProduct = async (req, res, next) => {
 module.exports.getTopCustomers = async (req, res, next) => {
     const sellerId = new mongoose.Types.ObjectId(req.UserData.userId);
     const pipeline = [
-        { $match: { seller: sellerId } },
+        { $match: { seller_id: sellerId } },
         {
             $group: {
                 _id: "$user",
@@ -41,10 +41,14 @@ module.exports.getTopCustomers = async (req, res, next) => {
 
     const result = await TransactionModel.aggregate(pipeline);
 
-    const data = result.map(item => ({
-        customer: item._id,
-        totalAmount: item.totalAmount,
-        orders: item.orders
+    const data = await Promise.all(result.map(async (item) => {
+        const customer = await userModel.findById(item._id);
+        return {
+            customerName: customer ? customer.name : "Unknown", // Use customer name if found, otherwise use "Unknown"
+            customer: item._id,
+            totalAmount: item.totalAmount,
+            orders: item.orders
+        };
     }));
 
     res.status(200).json(data)
