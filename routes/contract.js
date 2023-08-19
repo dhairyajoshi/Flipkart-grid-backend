@@ -4,10 +4,7 @@ const router = express.Router()
 
 const contractController = require('../controllers/contractController')
 
-
 const authCheck = require('../middlewares/authCheck')
-
-// router.post('/addreward', contractController.addReward)
 
 router.get('/rewardhistory', authCheck, contractController.getRewardHistory)
 

@@ -13,142 +13,169 @@ function generateReferral(length) {
 }
 
 module.exports.signUp = async (req, res, next) => {
-    // check = await User.findOne({ username: req.body.username });
-    // if (check != null)
-    //     return res.status(400).json({ msg: "username already exists" });
+    try {
+        check = await User.findOne({ email: req.body.email });
 
-    check = await User.findOne({ email: req.body.email });
-    if (check != null)
-        return res.status(400).json({ msg: "email already exists" });
+        if (check != null)
+            return res.status(400).json({ msg: "email already exists!" });
 
 
-    const refId = req.body.refId
+        const refId = req.body.refId
 
-    var referrar = ""
-    if (refId) {
-        referrar = await userModel.findOne({ referral_code: refId })
-        if (!referrar)
-            return res.status(400).json({ msg: 'Invalid referral code!' })
+        var referrar = ""
+        if (refId) {
+            referrar = await userModel.findOne({ referral_code: refId })
+
+            if (!referrar)
+                return res.status(400).json({ msg: 'Invalid referral code!' })
+        }
+
+        const hashed = await bcrypt.hash(req.body.password, 10);
+
+        const newAccount = await web3.eth.accounts.create();
+
+        var ref_code = generateReferral(12)
+        var checkUser = await userModel.findOne({ referral_code: ref_code })
+
+        while (checkUser) {
+            ref_code = generateReferral(12)
+            checkUser = await userModel.findOne({ referral_code: ref_code })
+        }
+
+        const user = new User({
+            _id: new mongoose.Types.ObjectId(),
+            name: req.body.name,
+            email: req.body.email,
+            token: req.body.token,
+            walletAddress: newAccount.address,
+            role: req.body.role,
+            password: hashed,
+            referral_code: ref_code
+        });
+
+        await user.save();
+
+        if (referrar != "") {
+            await contractController.addReward(referrar.walletAddress, 50)
+            await contractController.addReward(user.walletAddress, 50)
+        }
+
+        const token = jwt.sign(
+            {
+                email: user.email,
+                userId: user._id,
+            },
+            process.env.jwt_key,
+            { expiresIn: "60 days" }
+        );
+
+        res.status(201).json({
+            msg: "user created successfully",
+            token: token,
+            user: user,
+        });
+    } catch (err) {
+        res.status(500).json({ msg: 'some error occurred!' })
     }
 
-    const hashed = await bcrypt.hash(req.body.password, 10);
-
-    const newAccount = await web3.eth.accounts.create();
-
-    var ref_code = generateReferral(12)
-    var checkUser = await userModel.findOne({ referral_code: ref_code })
-    while (checkUser) {
-        console.log(checkUser)
-        ref_code = generateReferral(12)
-        checkUser = await userModel.findOne({ referral_code: ref_code })
-    }
-
-    const user = new User({
-        _id: new mongoose.Types.ObjectId(),
-        name: req.body.name,
-        email: req.body.email,
-        token: req.body.token,
-        walletAddress: newAccount.address,
-        role: req.body.role,
-        password: hashed,
-        referral_code: ref_code
-    });
-
-    await user.save();
-
-    if (referrar != "") {
-        await contractController.addReward(referrar.walletAddress, 50)
-        await contractController.addReward(user.walletAddress, 50)
-    }
-
-    const token = jwt.sign(
-        {
-            email: user.email,
-            userId: user._id,
-        },
-        process.env.jwt_key,
-        { expiresIn: "60 days" }
-    );
-
-    res.status(201).json({
-        msg: "user created successfully",
-        token: token,
-        user: user,
-    });
 };
 
 module.exports.logIn = async (req, res, next) => {
-    const user = await User.findOne({ email: req.body.email });
+    try {
+        const user = await User.findOne({ email: req.body.email });
 
-    if (user == null) {
-        return res.status(400).json({ msg: "Wrong credentials!" });
+        if (user == null) {
+            return res.status(400).json({ msg: "Wrong credentials!" });
+        }
+        const chk = await bcrypt.compare(req.body.password, user.password);
+
+        if (!chk) {
+            return res.status(400).json({ msg: "Wrong credentials!" });
+        }
+
+        const token = jwt.sign(
+            {
+                email: user.email,
+                userId: user._id,
+            },
+            process.env.jwt_key,
+            { expiresIn: "60 days" }
+        );
+
+        res.status(200).json({
+            msg: "logged in successfully",
+            token: token,
+            user: user,
+        });
+    } catch (err) {
+        res.status(500).json({ msg: 'some error occurred!' })
     }
-    const chk = await bcrypt.compare(req.body.password, user.password);
 
-    if (!chk) {
-        return res.status(400).json({ msg: "Wrong credentials!" });
-    }
-
-    const token = jwt.sign(
-        {
-            email: user.email,
-            userId: user._id,
-        },
-        process.env.jwt_key,
-        { expiresIn: "60 days" }
-    );
-
-    res.status(200).json({
-        msg: "logged in successfully",
-        token: token,
-        user: user,
-    });
 };
 
 module.exports.getUser = async (req, res, next) => {
-    user = await userModel.findById(req.UserData['userId'])
-    res.status(200).json(user)
+    try {
+        user = await userModel.findById(req.UserData['userId'])
+        res.status(200).json(user)
+    }
+    catch (err) {
+        res.status(500).json({ msg: 'some error occurred!' })
+    }
 }
 
 module.exports.getAllUser = async (req, res, next) => {
-    users = await userModel.find().exec()
-    res.status(200).json(users)
+    try {
+        users = await userModel.find().exec()
+        res.status(200).json(users)
+    } catch (err) {
+        res.status(500).json({ msg: 'some error occurred!' })
+    }
 }
 
 module.exports.updateUser = async (req, res, next) => {
-    user = await userModel.findById(req.UserData['userId'])
-    fuser = await userModel.findOne({ username: req.body.username })
+    try {
+        const user = await userModel.findById(req.UserData['userId'])
+        const fuser = await userModel.findOne({ username: req.body.username })
 
-    if (fuser != null && user.id != fuser.id) {
-        return res.status(400).json({
-            'msg': 'username already exists'
+        if (fuser != null && user.id != fuser.id) {
+            return res.status(400).json({
+                'msg': 'username already exists'
+            })
+        }
+        fuser = await userModel.findOne({ email: req.body.email })
+        if (fuser != null && user.id != fuser.id) {
+            return res.status(400).json({
+                'msg': 'email already exists'
+            })
+        }
+
+        user.name = req.body.name
+        user.username = req.body.username
+        user.email = req.body.email
+
+        await user.save()
+
+        res.status(200).json({
+            'msg': 'user profile updated',
+            'user': user
         })
+    } catch (err) {
+        res.status(500).json({ msg: 'some error occurred!' })
     }
-    fuser = await userModel.findOne({ email: req.body.email })
-    if (fuser != null && user.id != fuser.id) {
-        return res.status(400).json({
-            'msg': 'email already exists'
-        })
-    }
-    user.name = req.body.name
-    user.username = req.body.username
-    user.email = req.body.email
-    await user.save()
-    res.status(200).json({
-        'msg': 'user profile updated',
-        'user': user
-    })
 }
 
 module.exports.getAllOrders = async (req, res, next) => {
-    const user = await userModel.findById(req.UserData.userId);
-    var orders = {}
+    try {
+        const user = await userModel.findById(req.UserData.userId);
+        var orders = {}
 
-    if (user.role == 'customer')
-        orders = await transactionModel.find({ user: req.UserData.userId }).exec()
-    else
-        orders = await transactionModel.find({ seller_id: req.UserData.userId }).exec()
+        if (user.role === 'customer')
+            orders = await transactionModel.find({ user: req.UserData.userId }).exec()
+        else
+            orders = await transactionModel.find({ seller_id: req.UserData.userId }).exec()
 
-
-    res.status(200).json({ ...orders })
+        res.status(200).json({ ...orders })
+    } catch (err) {
+        res.status(500).json({ msg: 'some error occurred!' })
+    }
 }

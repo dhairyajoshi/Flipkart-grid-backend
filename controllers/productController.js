@@ -3,7 +3,7 @@ const mongoose = require('mongoose')
 const userModel = require("../models/userModel")
 const contract = require('./contractController')
 const transactionModel = require("../models/transactionModel")
-const RewardModel = require("../models/RewardModel")
+const RewardModel = require("../models/rewardModel")
 
 function getCurrentDateTime() {
     const now = new Date();
@@ -39,43 +39,35 @@ module.exports.buy = async (req, res, next) => {
     const productPrice = product.price
     const supercoins = req.body.supercoins ? req.body.supercoins : 0
 
+    if(product.seller_id===req.UserData.userId){
+        return res.status(400).json({msg:'Cannot buy your own product!'})
+    }
+
+    if(supercoins>5000){
+        return res.status(400).json({msg:'Cannot Redeem more than 5000 supercoin at once!'})
+    }
+
+    if(supercoins<0){
+        return res.status(400).json({msg:'Supercoins cannot be less than 0!'})
+    }
+
+    if(supercoins>user.supercoins){
+        return res.status(400).json({msg:'Not enough supercoins!'})
+    }
+
     try {
         if (productPrice + supercoins <= user.account) {
             user.account -= productPrice - supercoins
             seller.account += productPrice
+
             await user.save()
             await seller.save()
+
             if (supercoins > 0)
                 await contract.transfer(user.walletAddress, undefined, supercoins)
+
             await contract.addReward(user.walletAddress, productPrice * 0.05)
             await contract.addReward(seller.walletAddress, productPrice * 0.05)
-
-            // const userReward = new RewardModel({
-            //     _id:new mongoose.Types.ObjectId(),
-            //     user: user._id,
-            //     amount: productPrice * 0.05,
-            //     received: true,
-            //     from: "FlipKart Reward Points",
-            //     transaction: product.name
-            // })
-
-            // const sellerReward = new RewardModel({
-            //     _id:new mongoose.Types.ObjectId(),
-            //     user: seller._id,
-            //     amount: productPrice * 0.05,
-            //     received: true,
-            //     from: "FlipKart Reward Points",
-            //     transaction: product.name
-            // })
-
-            // await userReward.save();
-            // await sellerReward.save();
-
-            // user.rewardHistory.push(userReward)
-            // sellerReward.rewardHistory.push(sellerReward)
-
-            // await user.save()
-            // seller.save()
 
             const transaction = new transactionModel({
                 _id: new mongoose.Types.ObjectId(),
@@ -103,7 +95,4 @@ module.exports.buy = async (req, res, next) => {
         console.log(err)
         res.status(400).json({ msg: err })
     }
-
-
-
 }

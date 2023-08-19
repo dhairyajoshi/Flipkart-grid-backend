@@ -4,16 +4,15 @@ const contractABI = require('../contractabi.json');
 const userModel = require('../models/userModel');
 
 const contractAddress = process.env.contract_address
-
 const web3 = new Web3('http://127.0.0.1:7545')
 const senderAddress = process.env.metamask_address;
 const privateKey = process.env.metamask_key.toString();
 const contract = new web3.eth.Contract(contractABI, contractAddress);
 
 function convertTime(timestamp) {
-    const date = new Date(timestamp * 1000); // Convert seconds to milliseconds
+    const date = new Date(timestamp * 1000);
     const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Month is zero-based
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const year = date.getFullYear();
 
     const hours = date.getHours().toString().padStart(2, '0');
@@ -47,6 +46,7 @@ module.exports.addReward = async (receiverAddress, amount) => {
         await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
     } catch (err) {
         console.error(err);
+        throw (err)
     }
 
 
@@ -55,24 +55,28 @@ module.exports.addReward = async (receiverAddress, amount) => {
 module.exports.getRewardHistory = async (req, res, next) => {
     try {
         const user = await userModel.findById(req.UserData.userId)
-
         const address = user.walletAddress
-
         const result = await contract.methods.earningHistory(address).call()
+
         earningHistory = []
+
         for (var i = 0; i < result['earningHistory'].length; i++) {
+            const seller = await userModel.findOne({ walletAddress: result['earningHistory'][i]['from'].toString() })
             earningHistory.push({
                 tokens: result['earningHistory'][i]['amount'].toString(),
                 createdAt: convertTime(result['earningHistory'][i]['createAt'].toString()),
                 expiryDate: convertTime(result['earningHistory'][i]['expiryDate'].toString()),
-                from: result['earningHistory'][i]['from'].toString() === process.env.metamask_address ? 'Flipkart Reward Points' : 'Customer Loyalty Points'
+                from: seller ? seller.name : 'FlipKart',
+                received: result['earningHistory'][i]['from'].toString() === process.env.metamask_address ? 'Flipkart Reward Points' : 'Customer Loyalty Points'
             })
         }
+
         const response = {
             totalEarning: result['totalEarning'].toString(),
             earningHistory
         }
-        res.json({ ...response })
+
+        res.status(200).json({ ...response })
     } catch (err) {
         console.log(err)
         res.json({ msg: "error occurred" })
@@ -86,12 +90,16 @@ module.exports.getTokens = async (req, res, next) => {
         const user = await userModel.findById(req.UserData.userId)
 
         const address = user.walletAddress
-        gasLimit = await contract.methods.expireTokens(address).estimateGas({ from: senderAddress })
+        const gasLimit = await contract.methods.expireTokens(address).estimateGas({ from: senderAddress })
+
         await contract.methods.expireTokens(address).send({ from: senderAddress, gas: gasLimit + BigInt(100000) })
+        
         const result = await contract.methods.viewTokens(address).call()
-        tokens = result.toString()
+        const tokens = result.toString()
+
         user.supercoins = tokens
-        user.save()
+        await user.save()
+        
         res.status(200).json({ tokens })
     } catch (err) {
         console.log(err)
