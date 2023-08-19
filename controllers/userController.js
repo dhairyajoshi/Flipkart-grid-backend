@@ -49,6 +49,7 @@ module.exports.signUp = async (req, res, next) => {
             token: req.body.token,
             walletAddress: newAccount.address,
             role: req.body.role,
+            phone: req.body.phone,
             password: hashed,
             referral_code: ref_code
         });
