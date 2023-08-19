@@ -39,20 +39,20 @@ module.exports.buy = async (req, res, next) => {
     const productPrice = product.price
     const supercoins = req.body.supercoins ? req.body.supercoins : 0
 
-    if(product.seller_id===req.UserData.userId){
-        return res.status(400).json({msg:'Cannot buy your own product!'})
+    if (product.seller_id === req.UserData.userId) {
+        return res.status(400).json({ msg: 'Cannot buy your own product!' })
     }
 
-    if(supercoins>5000){
-        return res.status(400).json({msg:'Cannot Redeem more than 5000 supercoin at once!'})
+    if (supercoins > 5000) {
+        return res.status(400).json({ msg: 'Cannot Redeem more than 5000 supercoin at once!' })
     }
 
-    if(supercoins<0){
-        return res.status(400).json({msg:'Supercoins cannot be less than 0!'})
+    if (supercoins < 0) {
+        return res.status(400).json({ msg: 'Supercoins cannot be less than 0!' })
     }
 
-    if(supercoins>user.supercoins){
-        return res.status(400).json({msg:'Not enough supercoins!'})
+    if (supercoins > user.supercoins) {
+        return res.status(400).json({ msg: 'Not enough supercoins!' })
     }
 
     try {
@@ -66,8 +66,10 @@ module.exports.buy = async (req, res, next) => {
             if (supercoins > 0)
                 await contract.transfer(user.walletAddress, undefined, supercoins)
 
-            await contract.addReward(user.walletAddress, productPrice * 0.05)
-            await contract.addReward(seller.walletAddress, productPrice * 0.05)
+            const reward = productPrice * 0.05 > 5000 ? 5000 : Math.round(productPrice * 0.05)
+
+            await contract.addReward(user.walletAddress, reward)
+            await contract.addReward(seller.walletAddress, reward)
 
             const transaction = new transactionModel({
                 _id: new mongoose.Types.ObjectId(),
@@ -79,7 +81,7 @@ module.exports.buy = async (req, res, next) => {
                 date: getCurrentDateTime(),
                 price: product.price,
                 supercoins: supercoins,
-                rewardEarned: productPrice * 0.05
+                rewardEarned: reward
             })
 
             await transaction.save()
