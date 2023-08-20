@@ -14,6 +14,7 @@ mongoose.connect(
 const port = process.env.PORT | 3000
 const user = require('./routes/user')
 const contract = require('./routes/contract')
+const partner = require('./routes/partner')
 const product = require('./routes/product')
 const seller = require('./routes/seller')
 const special = require('./routes/special')
@@ -36,8 +37,9 @@ app.use((req, res, next) => {
 app.get('/', (req, res) => res.send('Hello World!'))
 app.use('/user', user)
 app.use('/contract', contract)
+app.use('/partner', partner)
 app.use('/product', product)
-app.use('/seller',seller)
-app.use('/special',special)
+app.use('/seller', seller)
+app.use('/special', special)
 
 app.listen(port, () => console.log(`listening on port ${port}`))
